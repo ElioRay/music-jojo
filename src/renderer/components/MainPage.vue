@@ -21,7 +21,8 @@
                     </span>
                     <el-dropdown-menu slot="dropdown">
                         <el-dropdown-item command="about">
-                            <el-badge is-dot>关于</el-badge>
+                            <el-badge v-if="redotAbout" is-dot>关于</el-badge>
+                            <el-badge v-if="!redotAbout" is-dot hidden>关于</el-badge>
                         </el-dropdown-item>
                         <el-dropdown-item command="setdir">
                             设置下载路径
@@ -137,6 +138,7 @@
         songFilename: '',
         dialogVisible: false,
         dialogAbout: false,
+        redotAbout: true,
         currentPage: 1,
         pageSize: 15,
         totalSize: 0,
@@ -158,6 +160,8 @@
         method: 'get'
       })
       this.saveDir = ret['saveDir']
+      this.redotAbout = ret['redotAbout']
+      this.checkSaveDir()
     },
     methods: {
       openFolder () {
@@ -167,9 +171,23 @@
         this.currentPage = pageNum
         this.search()
       },
+      checkSaveDir () {
+        if (this.saveDir === '') {
+          this.$message.warning('请先设置下载目录')
+          this.setting('setdir')
+        }
+      },
       setting (name) {
         if (name === 'about') {
           this.dialogAbout = true
+          this.redotAbout = false
+          this.ipc.sendSync('Config', {
+            method: 'set',
+            setting: {
+              'saveDir': this.saveDir,
+              'redotAbout': false
+            }
+          })
         }
         if (name === 'setdir') {
           let that = this
@@ -182,7 +200,8 @@
               that.ipc.sendSync('Config', {
                 method: 'set',
                 setting: {
-                  'saveDir': files[0]
+                  'saveDir': files[0],
+                  'redotAbout': that.redotAbout
                 }
               })
               that.$message.success('设置下载目录成功')
@@ -312,6 +331,7 @@
       },
       download (type, url) {
         console.log(type, url)
+        this.checkSaveDir()
         this.percentage = 0
         let options = {
           url: 'http://moresound.tk/music/' + url,

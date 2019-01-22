@@ -77,7 +77,7 @@ app.request_remote = require('request')
 app.fs = fs
 app.dialog = dialog
 app.lowdb = db
-db.defaults({setting: { saveDir: '', about: false }})
+db.defaults({setting: { saveDir: '', redotAbout: true }})
   .write()
 
 ipcMain.on('Config', (event, arg) => {
