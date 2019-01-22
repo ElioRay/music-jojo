@@ -1,25 +1,9 @@
 # music-jojo
 
-> Download music in china market
+> 一款基于electron-vue的高颜值音乐下载器, 让你能非常优雅的下载音乐
 
-#### Build Setup
+Enjoy, 如果觉得好用, 请不要吝啬 ```star``` 或者 ```follow``` 哦, 或者顺便 ```buy me a coffee```
 
-``` bash
-# install dependencies
-npm install
-
-# serve with hot reload at localhost:9080
-npm run dev
-
-# build electron application for production
-npm run build
-
-
-# lint all JS/Vue component files in `src/`
-npm run lint
-
-```
-
----
-
-This project was generated with [electron-vue](https://github.com/SimulatedGREG/electron-vue)@[8fae476](https://github.com/SimulatedGREG/electron-vue/tree/8fae4763e9d225d3691b627e83b9e09b56f6c935) using [vue-cli](https://github.com/vuejs/vue-cli). Documentation about the original structure can be found [here](https://simulatedgreg.gitbooks.io/electron-vue/content/index.html).
+|支付宝|微信|
+|:-----:|:-----:|
+|<img width="152" src="https://i.loli.net/2018/09/11/5b9762ccc140f.png">|<img width="150" src="https://i.loli.net/2018/09/11/5b9762ad8fcb3.png"/>|
