@@ -1,16 +1,35 @@
 <template>
     <div>
-        <el-input placeholder="请输入搜索的歌名，歌手，专辑" v-model="keyword" @keyup.enter.native="search" clearable prefix-icon="el-icon-search" class="input-with-select">
-            <el-select v-model="search_engine" slot="prepend" placeholder="请选择平台">
-                <el-option label="QQ" value="qq"></el-option>
-                <el-option label="酷我" value="kw"></el-option>
-                <el-option label="虾米" value="xm"></el-option>
-                <el-option label="酷狗" value="kg"></el-option>
-                <el-option label="百度" value="bd"></el-option>
-                <el-option label="网易" value="wy"></el-option>
-            </el-select>
-            <el-button @click="search" slot="append" type="success">搜索</el-button>
-        </el-input>
+        <el-row type="flex" align="middle">
+            <el-col :span="23">
+                <el-input placeholder="请输入搜索的歌名，歌手，专辑" v-model="keyword" @keyup.enter.native="search" clearable prefix-icon="el-icon-search" class="input-with-select">
+                    <el-select v-model="search_engine" slot="prepend" placeholder="请选择平台">
+                        <el-option label="QQ" value="qq"></el-option>
+                        <el-option label="酷我" value="kw"></el-option>
+                        <el-option label="虾米" value="xm"></el-option>
+                        <el-option label="酷狗" value="kg"></el-option>
+                        <el-option label="百度" value="bd"></el-option>
+                        <el-option label="网易" value="wy"></el-option>
+                    </el-select>
+                    <el-button @click="search" slot="append" type="success">搜索</el-button>
+                </el-input>
+            </el-col>
+            <el-col :span="1" style="text-align: right">
+                <el-dropdown @command="setting">
+                    <span class="el-dropdown-link">
+                        <i style="font-size: 22px" class="el-icon-setting"></i>
+                    </span>
+                    <el-dropdown-menu slot="dropdown">
+                        <el-dropdown-item command="about">
+                            <el-badge is-dot>关于</el-badge>
+                        </el-dropdown-item>
+                        <el-dropdown-item command="setdir">
+                            设置下载路径
+                        </el-dropdown-item>
+                    </el-dropdown-menu>
+                </el-dropdown>
+            </el-col>
+        </el-row>
 
         <el-table
                 v-loading="loading"
@@ -65,12 +84,23 @@
         </div>
 
         <el-dialog
+                title="关于"
+                :visible.sync="dialogAbout"
+                width="40%">
+            <span>一款高颜值的音乐下载器, 让你能非常优雅的下载音乐, 详细信息可以访问 Github<br>
+                <a href="https://github.com/liuzhuoling2011/music-jojo" target="_blank">https://github.com/liuzhuoling2011/music-jojo</a>
+            </span>
+            <span slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="dialogAbout = false">确 定</el-button>
+            </span>
+        </el-dialog>
+        <el-dialog
                 title="下载选择"
                 :visible.sync="dialogVisible"
                 width="40%">
             <div v-loading.lock="select_loading">
-                <img v-if="songUrlData.hasOwnProperty('专辑封面')" :src="songUrlData['专辑封面']" style="width: 58%; vertical-align: top;"/>
-                <div style="margin-left: 5px;width: 30%; display: inline-block">
+                <img v-if="songUrlData.hasOwnProperty('专辑封面')" :src="songUrlData['专辑封面']" style="width: 55%; vertical-align: top;"/>
+                <div style="margin-left: 5px;width: 40%; display: inline-block">
                     <div style="margin-bottom: 5px"><el-button @click="download('24AAC', songUrlData['24AAC'])" size="mini" round v-if="songUrlData.hasOwnProperty('24AAC')">24AAC</el-button></div>
                     <div style="margin-bottom: 5px"><el-button @click="download('128MP3', songUrlData['128MP3'])" size="mini" type="primary" round v-if="songUrlData.hasOwnProperty('128MP3')">128MP3</el-button></div>
                     <div style="margin-bottom: 5px"><el-button @click="download('320MP3', songUrlData['320MP3'])" size="mini" type="success" round v-if="songUrlData.hasOwnProperty('320MP3')">320MP3</el-button></div>
@@ -97,6 +127,7 @@
     name: 'MainPage',
     data () {
       return {
+        saveDir: '',
         keyword: '',
         search_engine: 'qq',
         loading: false,
@@ -105,6 +136,7 @@
         songUrlData: {},
         songFilename: '',
         dialogVisible: false,
+        dialogAbout: false,
         currentPage: 1,
         pageSize: 15,
         totalSize: 0,
@@ -116,19 +148,50 @@
           'content-type': 'multipart/form-data'
         },
         percentage: 0,
+        shell: require('electron').shell,
         ipc: require('electron').ipcRenderer,
         app: require('electron').remote.app
       }
     },
+    mounted () {
+      let ret = this.ipc.sendSync('Config', {
+        method: 'get'
+      })
+      this.saveDir = ret['saveDir']
+    },
     methods: {
       openFolder () {
-        this.app.shell.showItemInFolder('.')
+        this.shell.showItemInFolder(this.saveDir + '/1')
       },
       setCurPage (pageNum) {
         this.currentPage = pageNum
         this.search()
       },
+      setting (name) {
+        if (name === 'about') {
+          this.dialogAbout = true
+        }
+        if (name === 'setdir') {
+          let that = this
+          this.app.dialog.showOpenDialog({
+            properties: ['openDirectory']
+          }, function (files) {
+            if (files) {
+              console.log(files[0])
+              that.saveDir = files[0]
+              that.ipc.sendSync('Config', {
+                method: 'set',
+                setting: {
+                  'saveDir': files[0]
+                }
+              })
+              that.$message.success('设置下载目录成功')
+            }
+          })
+        }
+      },
       search () {
+        this.songData = []
         var options = {
           url: 'http://moresound.tk/music/api.php?search=' + this.search_engine,
           headers: this.headers,
@@ -144,20 +207,23 @@
         let that = this
         this.app.request_remote.post(options, (error, response, body) => {
           that.loading = false
-          console.log('error: ', error)
+          if (error) {
+            console.log('error: ', error)
+            this.$message.error(error)
+          }
           if (!error && response.statusCode === 200) {
             console.log(body)
             let res = JSON.parse(body)
-            if (res['code'] !== 0) {
+            if (res['code'].toString() !== '0') {
               this.$message.error(res['msg'])
               return
             }
-            if (res['num'] === 0) {
+            if (res['num'].toString() === '0') {
               that.$message.warning('抱歉，没有找到相关歌曲')
               return
             }
-            that.currentPage = res['page']
-            that.totalSize = res['totalnum']
+            that.currentPage = parseInt(res['page'])
+            that.totalSize = parseInt(res['totalnum'])
             that.songData = []
             for (let i = 0; i < res['song_list'].length; i++) {
               let singer = res['song_list'][i]['singer'][0]['name']
@@ -199,20 +265,20 @@
             let res = JSON.parse(body)
             console.log(res)
             let reg = new RegExp('/', 'g')
-            that.songFilename = res['song'] + '-' + res['singer'].replace(reg, '&')
+            that.songFilename = res['song'] + ' - ' + res['singer'].replace(reg, '&')
             that.songUrlData = res['url']
           }
         })
       },
       downloadFile (type, body) {
+        this.$message.success('获取直连成功，开始下载')
         if (type === 'lrc') {
-          this.app.fs.writeFile('./' + this.songFilename + '.lrc', body, (error) => {
+          this.app.fs.writeFile(this.saveDir + '/' + this.songFilename + '.lrc', body, (error) => {
             if (error) {
               console.log(error)
             }
           })
           this.percentage = 100
-          this.download_status = 'success'
           return
         }
         let res = JSON.parse(body)
@@ -224,7 +290,7 @@
           uri: res['url']
         })
 
-        var out = this.app.fs.createWriteStream('./' + this.songFilename + '.' + res['suffix'])
+        var out = this.app.fs.createWriteStream(this.saveDir + '/' + this.songFilename + '.' + res['suffix'])
         req.pipe(out)
 
         req.on('response', function (data) {
@@ -241,7 +307,6 @@
 
         req.on('end', function () {
           that.percentage = 100
-          that.download_status = 'success'
           console.log('下载完成')
         })
       },
@@ -249,24 +314,25 @@
         console.log(type, url)
         this.percentage = 0
         let options = {
-          url: 'http://moresound.tk/music/' + url
+          url: 'http://moresound.tk/music/' + url,
+          headers: this.headers
         }
-        let that = this
         this.app.request_remote.get(options, (error, response, body) => {
           if (!error && response.statusCode === 200) {
             console.log(body)
-            let res = JSON.parse(body)
-            if (res.hasOwnProperty('code') && res['code'] !== 0) {
-              options['headers'] = that.headers
-              this.app.request_remote.get(options, (error, response, body) => {
-                if (!error && response.statusCode === 200) {
-                  console.log(body)
-                  this.downloadFile(type, body)
-                }
-              })
-            } else {
-              this.downloadFile(type, body)
-            }
+            this.downloadFile(type, body)
+            // let res = JSON.parse(body)
+            // if (res.hasOwnProperty('code') && res['code'] !== 0) {
+            //   options['headers'] = that.headers
+            //   this.app.request_remote.get(options, (error, response, body) => {
+            //     if (!error && response.statusCode === 200) {
+            //       console.log(body)
+            //       this.downloadFile(type, body)
+            //     }
+            //   })
+            // } else {
+            //   this.downloadFile(type, body)
+            // }
           }
         })
       }
@@ -277,5 +343,9 @@
 <style scoped>
     .el-select {
         width: 120px;
+    }
+    .item {
+        margin-top: 5px;
+        margin-right: 40px;
     }
 </style>
